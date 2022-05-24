@@ -70,6 +70,10 @@ app.post('/reviews',async(req,res)=>{
   const review=await reviewCollection.insertOne(newReview);
   res.send(review)
 })
+app.get('/reviews',async(req,res)=>{
+  const result=await reviewCollection.find().toArray()
+  res.send(result)
+})
 // make Admin
 app.put('/user/:email',async(req,res)=>{
   const email=req.params.email;
@@ -82,6 +86,18 @@ app.put('/user/:email',async(req,res)=>{
   const result=await userCollection.updateOne(filter,updateDoc,options);
   const token=jwt.sign({email:email},process.env.ACCESS_TOKEN_SECRET,{ expiresIn: '1h' })
   res.send({result,token});
+
+})
+app.put('/user/admin/:email',async(req,res)=>{
+  const email=req.params.email;
+  console.log(email)
+  const filter={email:email};
+  const updateDoc = {
+    $set: {role:'admin'},
+  };
+  const result=await userCollection.updateOne(filter,updateDoc);
+  
+  res.send(result);
 
 })
 app.get('/user',async(req,res)=>{
