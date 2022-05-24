@@ -3,7 +3,10 @@ const app = express()
 const port =process.env.PORT || 5000;
 const cors = require('cors');
 require('dotenv').config()
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+var jwt = require('jsonwebtoken');
+
+const { MongoClient, ServerApiVersion, ObjectId, Admin } = require('mongodb');
+const verify = require('jsonwebtoken/verify');
 
 
 app.use(cors());
@@ -13,12 +16,28 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+function verifyJWT(req,res,next){
+  const authHeader=req.headers.authorization;
+  if(!authHeader){
+    return res.status(403).send('can not access')
+  }
+  const token=authHeader.split(' ')[1]
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function(err, decoded) {
+    if(err){
+      return res.status(401).send('can not access')
+    }
+req.decoded=decoded;
+next()
+  });
+}
+
 async function run(){
   try{
     await client.connect();
     const productCollection=client.db('construction_tools').collection('products');
     const orderCollection=client.db('construction_tools').collection('orders');
     const reviewCollection=client.db('construction_tools').collection('reviews');
+    const userCollection=client.db('construction_tools').collection('users');
 
     app.get('/product',async(req,res)=>{
         const query={}
@@ -39,7 +58,7 @@ app.post('/orders',async(req,res)=>{
     res.send(result);
 })
 
-app.get('/orders' ,async(req,res)=>{
+app.get('/orders',verifyJWT,async(req,res)=>{
 const email=req.query;
 console.log(email)
 const myItem=await orderCollection.find(email).toArray()
@@ -50,6 +69,24 @@ app.post('/reviews',async(req,res)=>{
   const newReview=req.body;
   const review=await reviewCollection.insertOne(newReview);
   res.send(review)
+})
+// make Admin
+app.put('/user/:email',async(req,res)=>{
+  const email=req.params.email;
+  const user=req.body;
+  const filter={email:email};
+  const options = { upsert: true };
+  const updateDoc = {
+    $set: user,
+  };
+  const result=await userCollection.updateOne(filter,updateDoc,options);
+  const token=jwt.sign({email:email},process.env.ACCESS_TOKEN_SECRET,{ expiresIn: '1h' })
+  res.send({result,token});
+
+})
+app.get('/user',async(req,res)=>{
+  const users=await userCollection.find().toArray()
+  res.send(users)
 })
   }  
   finally{
