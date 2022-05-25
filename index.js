@@ -22,6 +22,7 @@ function verifyJWT(req,res,next){
     return res.status(403).send('can not access')
   }
   const token=authHeader.split(' ')[1]
+  console.log(token)
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function(err, decoded) {
     if(err){
       return res.status(401).send('can not access')
@@ -39,6 +40,8 @@ async function run(){
     const reviewCollection=client.db('construction_tools').collection('reviews');
     const userCollection=client.db('construction_tools').collection('users');
 
+// products
+
     app.get('/product',async(req,res)=>{
         const query={}
         const cursor=productCollection.find(query);
@@ -52,19 +55,22 @@ async function run(){
         const product=await productCollection.findOne(query);
         res.send(product);
     })
+
+    // orders
+
 app.post('/orders',async(req,res)=>{
     const newOrder=req.body;
     const result=await orderCollection.insertOne(newOrder);
     res.send(result);
 })
 
-app.get('/orders',verifyJWT,async(req,res)=>{
+app.get('/orders',async(req,res)=>{
 const email=req.query;
-console.log(email)
+// console.log(email)
 const myItem=await orderCollection.find(email).toArray()
 res.send(myItem)
 })
-
+// reviews
 app.post('/reviews',async(req,res)=>{
   const newReview=req.body;
   const review=await reviewCollection.insertOne(newReview);
@@ -85,12 +91,13 @@ app.put('/user/:email',async(req,res)=>{
   };
   const result=await userCollection.updateOne(filter,updateDoc,options);
   const token=jwt.sign({email:email},process.env.ACCESS_TOKEN_SECRET,{ expiresIn: '1h' })
+  console.log(token)
   res.send({result,token});
 
 })
 app.put('/user/admin/:email',async(req,res)=>{
   const email=req.params.email;
-  console.log(email)
+  // console.log(email)
   const filter={email:email};
   const updateDoc = {
     $set: {role:'admin'},
