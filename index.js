@@ -86,6 +86,12 @@ app.post('/product',async(req,res)=>{
         res.send(product);
     })
 
+    app.delete('/product/:id',async(req,res)=>{
+      const id=req.params.id
+    const query={_id:ObjectId(id)}
+    const result=await productCollection.deleteOne(query)
+    res.send(result)
+    })
     // orders
 
 app.post('/orders',async(req,res)=>{
