@@ -48,12 +48,15 @@ async function run(){
     const orderCollection=client.db('construction_tools').collection('orders');
     const reviewCollection=client.db('construction_tools').collection('reviews');
     const userCollection=client.db('construction_tools').collection('users');
+    const paymentCollection=client.db('construction_tools').collection('payments');
 
 // payment
 app.post('/create-payment-intent',async(req,res)=>{
   const service=req.body;
+  
   console.log(service)
-  const price=service.price;
+  const price=service.totalPrice;
+  console.log(price)
   const amount=price*100;
   
   const paymentIntent = await stripe.paymentIntents.create({
@@ -118,6 +121,29 @@ app.get('/orders/:id',async(req,res)=>{
   const result=await orderCollection.findOne(query)
   res.send(result)
 })
+app.patch('/orders/:id',async(req,res)=>{
+  const id=req.params.id;
+  const payment=req.body;
+  console.log(payment)
+  const filter={_id:ObjectId(id)};
+  const updateDoc={
+    $set:{
+paid:true,
+transactionId:payment.transactionId
+    }
+  }
+  const updatedOrder=await orderCollection.updateOne(filter,updateDoc);
+  const result=await paymentCollection.insertOne(payment)
+  res.send(updatedOrder)
+})
+
+app.delete('/orders/:id',async(req,res)=>{
+  const id=req.params.id
+  const query={_id:ObjectId(id)}
+  const result=await orderCollection.deleteOne(query);
+  res.send(result)
+})
+
 // reviews
 app.post('/reviews',async(req,res)=>{
   const newReview=req.body;
